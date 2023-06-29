@@ -1,15 +1,20 @@
 ﻿using System;
+using System.Data;
+using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using Microsoft.SqlServer.Server;
+using System.Text;
+using System.Globalization;
 
-namespace SpatialDataLibrary
+namespace SpatialData
 {
     [Serializable]
     [SqlUserDefinedType(Format.UserDefined, MaxByteSize = 8000)]
-    public class Point : INullable
+    public class Point : INullable, IBinarySerialize
     {
         public double x;
         public double y;
+        private bool isNull;
 
         public Point(double x, double y)
         {
@@ -23,20 +28,17 @@ namespace SpatialDataLibrary
             this.y = Double.NaN;
         }
 
-        public bool IsNull
-        {
-            get { return (Double.IsNaN(this.x) || Double.IsNaN(this.y)); }
-        }
-
         public static Point Null
         {
             get
             {
-                return new Point();
+                Point p = new Point();
+                p.isNull = true;
+                return p;
             }
         }
 
-        public bool isNull
+        public bool IsNull
         {
             get { return isNull; }
         }
@@ -54,7 +56,7 @@ namespace SpatialDataLibrary
         }
 
 
-        public double Distance(Point p)
+        public SqlDouble Distance(Point p)
         {
             if (this.IsNull || p.IsNull)
             {
@@ -88,7 +90,22 @@ namespace SpatialDataLibrary
                 return "NULL";
             }
 
-            return "[" + this.x + ", " + this.y + "]";
+            return this.x + "," + this.y;
         }
+
+        #region IBinarySerialize Members
+
+        public void Write(System.IO.BinaryWriter writer)
+        {
+            writer.Write(this.x);
+            writer.Write(this.y);
+        }
+
+        public void Read(System.IO.BinaryReader reader)
+        {
+            this.x = reader.ReadDouble();
+            this.y = reader.ReadDouble();
+        }
+        #endregion
     }
 }
